@@ -1,17 +1,21 @@
 import runpod
+import asyncio
 
-def handler(job):
-    """
-    This is a simple handler that takes a name as input and returns a greeting.
-    The job parameter contains the input data in job["input"]
-    """
-    job_input = job["input"]
-    
-    # Get the name from the input, default to "World" if not provided
-    name = job_input.get("name", "World")
-    
-    # Return a greeting message
-    return f"Hello, {name}! Welcome to RunPod Serverless!"
 
-# Start the serverless function
-runpod.serverless.start({"handler": handler})
+async def async_generator_handler(job):
+    for i in range(5):
+        # Generate an asynchronous output token
+        output = f"Generated async token output {i}"
+        yield output
+
+        # Simulate an asynchronous task, such as processing time for a large language model
+        await asyncio.sleep(1)
+
+
+# Configure and start the RunPod serverless function
+runpod.serverless.start(
+    {
+        "handler": async_generator_handler,  # Required: Specify the async handler
+        "return_aggregate_stream": True,  # Optional: Aggregate results are accessible via /run endpoint
+    }
+)
