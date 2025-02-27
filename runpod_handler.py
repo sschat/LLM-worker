@@ -30,9 +30,11 @@ def call_llm_service(instruction, custom_system_prompt=None):
         dict: The processed response with text content
     """
     try:
+        # Get system prompt - custom one takes precedence over config
+        system_prompt = get_system_prompt(custom_system_prompt) if custom_system_prompt else config.get("system_prompt")
+        
         # Format the prompt with system instructions if needed
-        if custom_system_prompt or config.get("system_prompt"):
-            system_prompt = custom_system_prompt or config.get("system_prompt")
+        if system_prompt:
             formatted_prompt = format_prompt(instruction, system_prompt)
         else:
             formatted_prompt = instruction
