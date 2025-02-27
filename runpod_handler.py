@@ -21,7 +21,7 @@ async def call_llm_service(instruction):
         instruction (str): The instruction to send to the LLM
         
     Returns:
-        dict: The response from the LLM service
+        dict: The processed response with text content
     """
     try:
         # Prepare headers with API key if available
@@ -43,9 +43,48 @@ async def call_llm_service(instruction):
             headers=headers
         )
         response.raise_for_status()
-        return response.json()
+        
+        # Parse the response from the LLM
+        raw_response = response.json()
+        
+        # Process the response based on its structure
+        if "choices" in raw_response and len(raw_response["choices"]) > 0:
+            # OpenAI-compatible API format
+            choice = raw_response["choices"][0]
+            
+            if "text" in choice:
+                # Completion API format
+                return {
+                    "result": choice["text"],
+                    "finish_reason": choice.get("finish_reason", ""),
+                    "model": raw_response.get("model", ""),
+                    "usage": raw_response.get("usage", {})
+                }
+            elif "message" in choice and "content" in choice["message"]:
+                # Chat API format
+                return {
+                    "result": choice["message"]["content"],
+                    "finish_reason": choice.get("finish_reason", ""),
+                    "model": raw_response.get("model", ""),
+                    "usage": raw_response.get("usage", {})
+                }
+            else:
+                # Unknown choice format
+                return {
+                    "result": f"Received response in unknown format: {choice}",
+                    "raw_response": raw_response
+                }
+        else:
+            # Non-OpenAI format or custom API
+            return {
+                "result": raw_response.get("result", 
+                          raw_response.get("output", 
+                          raw_response.get("response", 
+                          "Response received but format not recognized"))),
+                "raw_response": raw_response
+            }
     except requests.exceptions.RequestException as e:
-        return {"error": str(e)}
+        return {"error": str(e), "result": "Error calling LLM service"}
 
 async def async_generator_handler(job):
     """
@@ -63,21 +102,38 @@ async def async_generator_handler(job):
     
     if instruction:
         # First generate a message that we're processing
-        yield "Processing instruction with LLM..."
+        yield {"status": "processing", "message": "Processing instruction with LLM..."}
         
         # Call the LLM service
         try:
-            result = await asyncio.to_thread(call_llm_service, instruction)
-            # Return the result
-            yield result
+            # Get response from LLM 
+            response = await asyncio.to_thread(call_llm_service, instruction)
+            
+            # Check for errors
+            if "error" in response:
+                yield {"status": "error", "message": response["error"]}
+            else:
+                # Extract the result text and return a clean response
+                result_text = response.get("result", "No result returned from LLM")
+                
+                # Return a properly formatted response
+                yield {
+                    "status": "success",
+                    "output": result_text,
+                    "metadata": {
+                        "model": response.get("model", "unknown"),
+                        "finish_reason": response.get("finish_reason", ""),
+                        "usage": response.get("usage", {})
+                    }
+                }
         except Exception as e:
-            yield {"error": f"Failed to process instruction: {str(e)}"}
+            yield {"status": "error", "message": f"Failed to process instruction: {str(e)}"}
     else:
         # If no instruction provided, fall back to demo mode
-        yield {"warning": "No instruction provided, falling back to demo mode"}
+        yield {"status": "warning", "message": "No instruction provided, falling back to demo mode"}
         for i in range(5):
             output = f"Generated async token output {i}"
-            yield output
+            yield {"status": "demo", "output": output}
             await asyncio.sleep(1)
 
 # Configure and start the RunPod serverless function
