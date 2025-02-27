@@ -19,11 +19,6 @@ This is a Python application designed to be deployed as a Docker container on Ru
    pip install -r requirements.txt
    ```
 
-2. Run the Flask app:
-   ```
-   python app.py
-   ```
-
 3. Test the RunPod handler:
    ```
    python runpod_handler.py
@@ -37,10 +32,6 @@ This is a Python application designed to be deployed as a Docker container on Ru
    conda activate runpod-app
    ```
 
-2. Run the Flask app:
-   ```
-   python app.py
-   ```
 
 3. Test the RunPod handler:
    ```
@@ -51,10 +42,10 @@ This is a Python application designed to be deployed as a Docker container on Ru
 
 ```bash
 # Build Docker image
-docker build -t my-runpod-app .
+docker build -t sschat/llm-frontend:main .
 
 # Run container locally
-docker run -p 8000:8000 my-runpod-app
+docker run -p 8000:8000 sschat/llm-frontend:main
 ```
 
 ## Deploying to RunPod
