@@ -13,7 +13,7 @@ endpoint = runpod.Endpoint(os.getenv("RUNPOD_ENDPOINT_ID"))
 LLM_ENDPOINT = os.getenv("LLM_ENDPOINT", "https://m35z5chdp2dfnx-5000.proxy.runpod.net/v1/completions")
 LLM_API_KEY = os.getenv("RUNPOD_API_KEY")
 
-async def call_llm_service(instruction):
+def call_llm_service(instruction):
     """
     Call the LLM service with the given instruction.
     
@@ -106,8 +106,9 @@ async def async_generator_handler(job):
         
         # Call the LLM service
         try:
-            # Get response from LLM 
-            response = await asyncio.to_thread(call_llm_service, instruction)
+            # Get response from LLM (now a regular function, not a coroutine)
+            # so no need for asyncio.to_thread
+            response = call_llm_service(instruction)
             
             # Check for errors
             if "error" in response:
