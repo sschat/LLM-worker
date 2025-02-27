@@ -24,7 +24,20 @@ async def call_llm_service(instruction):
     try:
         response = requests.post(
             LLM_ENDPOINT,
-            json={"prompt": instruction}
+            json={
+                "prompt": instruction,
+                "max_tokens": 200,
+                "temperature": 0.7,
+                "top_p": 0.9, 
+                "frequency_penalty": 0,
+                "presence_penalty": 0,
+                "stream": True
+            },
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {os.getenv('RUNPOD_API_KEY')}"
+            },
+            verify=False
         )
         response.raise_for_status()
         return response.json()
