@@ -7,15 +7,14 @@ load_dotenv()
 
 # Configure RunPod API key
 runpod.api_key = os.getenv("RUNPOD_API_KEY")
-endpoint = runpod.Endpoint(os.getenv("RUNPOD_ENDPOINT_ID"))
 
 # LLM endpoint
 LLM_ENDPOINT = os.getenv("LLM_ENDPOINT", "https://m35z5chdp2dfnx-5000.proxy.runpod.net/v1/completions")
-LLM_API_KEY = os.getenv("RUNPOD_API_KEY")
+LLM_API_KEY = os.getenv("LLM_API_KEY", os.getenv("RUNPOD_API_KEY"))
 
 def call_llm_service(instruction):
     """
-    Call the LLM service with the given instruction.
+    Synchronous function to call the LLM service with the given instruction.
     
     Args:
         instruction (str): The instruction to send to the LLM
@@ -86,39 +85,35 @@ def call_llm_service(instruction):
     except requests.exceptions.RequestException as e:
         return {"error": str(e), "result": "Error calling LLM service"}
 
-async def async_generator_handler(job):
+# Simple synchronous handler for testing
+def handler(job):
     """
-    Handler for RunPod serverless jobs.
+    Synchronous handler for RunPod serverless jobs.
     
     Args:
         job (dict): The job input from RunPod
         
-    Yields:
-        str or dict: Status updates and final result
+    Returns:
+        dict: The result of processing the job
     """
-    # RunPod provides input in job["input"]
-    job_input = job["input"] if isinstance(job, dict) and "input" in job else {}
+    # Get input from the job
+    job_input = job["input"]
     instruction = job_input.get("instruction", "")
     
     if instruction:
-        # First generate a message that we're processing
-        yield {"status": "processing", "message": "Processing instruction with LLM..."}
-        
         # Call the LLM service
         try:
-            # Get response from LLM (now a regular function, not a coroutine)
-            # so no need for asyncio.to_thread
             response = call_llm_service(instruction)
             
             # Check for errors
             if "error" in response:
-                yield {"status": "error", "message": response["error"]}
+                return {"status": "error", "message": response["error"]}
             else:
                 # Extract the result text and return a clean response
                 result_text = response.get("result", "No result returned from LLM")
                 
                 # Return a properly formatted response
-                yield {
+                return {
                     "status": "success",
                     "output": result_text,
                     "metadata": {
@@ -128,19 +123,10 @@ async def async_generator_handler(job):
                     }
                 }
         except Exception as e:
-            yield {"status": "error", "message": f"Failed to process instruction: {str(e)}"}
+            return {"status": "error", "message": f"Failed to process instruction: {str(e)}"}
     else:
-        # If no instruction provided, fall back to demo mode
-        yield {"status": "warning", "message": "No instruction provided, falling back to demo mode"}
-        for i in range(5):
-            output = f"Generated async token output {i}"
-            yield {"status": "demo", "output": output}
-            await asyncio.sleep(1)
+        # If no instruction provided
+        return {"status": "error", "message": "No instruction provided"}
 
 # Configure and start the RunPod serverless function
-runpod.serverless.start(
-    {
-        "handler": async_generator_handler,
-        "return_aggregate_stream": True,
-    }
-)
+runpod.serverless.start({"handler": handler})
