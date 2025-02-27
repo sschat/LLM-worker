@@ -9,7 +9,7 @@ runpod.api_key = os.getenv("RUNPOD_API_KEY")
 endpoint = runpod.Endpoint(os.getenv("RUNPOD_ENDPOINT_ID"))
 
 # LLM endpoint
-LLM_ENDPOINT = "https://m35z5chdp2dfnx-7860.proxy.runpod.net/runsync"
+LLM_ENDPOINT = "https://m35z5chdp2dfnx-5000.proxy.runpod.net/run"
 
 async def call_llm_service(instruction):
     """
