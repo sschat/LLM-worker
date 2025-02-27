@@ -1,0 +1,8 @@
+{
+    "system_prompt": "You are a friendly and helpful AI assistant created to provide information and assistance on a wide range of topics. Your responses should be clear, informative, and tailored to the user's needs. Always try to give the most accurate and up-to-date information possible.",
+    "temperature": 0.8,
+    "max_tokens": 300,
+    "top_p": 0.95,
+    "presence_penalty": 0.1,
+    "frequency_penalty": 0.1
+}

@@ -1,8 +1,10 @@
 import runpod
-import asyncio
 import os
 import requests
+import json
 from dotenv import load_dotenv
+from instructions import parse_config, format_prompt, get_system_prompt
+
 load_dotenv()
 
 # Configure RunPod API key
@@ -12,17 +14,29 @@ runpod.api_key = os.getenv("RUNPOD_API_KEY")
 LLM_ENDPOINT = os.getenv("LLM_ENDPOINT", "https://m35z5chdp2dfnx-5000.proxy.runpod.net/v1/completions")
 LLM_API_KEY = os.getenv("LLM_API_KEY", os.getenv("RUNPOD_API_KEY"))
 
-def call_llm_service(instruction):
+# Load configuration
+CONFIG_PATH = os.getenv("CONFIG_PATH", "config.json")
+config = parse_config(CONFIG_PATH if os.path.exists(CONFIG_PATH) else None)
+
+def call_llm_service(instruction, custom_system_prompt=None):
     """
     Synchronous function to call the LLM service with the given instruction.
     
     Args:
         instruction (str): The instruction to send to the LLM
+        custom_system_prompt (str, optional): Custom system prompt to use
         
     Returns:
         dict: The processed response with text content
     """
     try:
+        # Format the prompt with system instructions if needed
+        if custom_system_prompt or config.get("system_prompt"):
+            system_prompt = custom_system_prompt or config.get("system_prompt")
+            formatted_prompt = format_prompt(instruction, system_prompt)
+        else:
+            formatted_prompt = instruction
+        
         # Prepare headers with API key if available
         headers = {
             "Content-Type": "application/json"
@@ -30,15 +44,23 @@ def call_llm_service(instruction):
         if LLM_API_KEY:
             headers["Authorization"] = f"Bearer {LLM_API_KEY}"
         
+        # Get parameters from config
+        params = {
+            "prompt": formatted_prompt,
+            "max_tokens": config.get("max_tokens", 200),
+            "temperature": config.get("temperature", 0.7),
+            "top_p": config.get("top_p", 0.9)
+        }
+        
+        # Add optional parameters if present in config
+        for param in ["presence_penalty", "frequency_penalty", "stop"]:
+            if param in config:
+                params[param] = config[param]
+        
         # Make the API call
         response = requests.post(
             LLM_ENDPOINT,
-            json={
-                "prompt": instruction,
-                "max_tokens": 200,
-                "temperature": 0.7,
-                "top_p": 0.9
-            },
+            json=params,
             headers=headers
         )
         response.raise_for_status()
@@ -85,7 +107,7 @@ def call_llm_service(instruction):
     except requests.exceptions.RequestException as e:
         return {"error": str(e), "result": "Error calling LLM service"}
 
-# Simple synchronous handler for testing
+# Handler for RunPod serverless jobs
 def handler(job):
     """
     Synchronous handler for RunPod serverless jobs.
@@ -100,10 +122,13 @@ def handler(job):
     job_input = job["input"]
     instruction = job_input.get("instruction", "")
     
+    # Check for custom system prompt in the job input
+    custom_system_prompt = job_input.get("system_prompt")
+    
     if instruction:
         # Call the LLM service
         try:
-            response = call_llm_service(instruction)
+            response = call_llm_service(instruction, custom_system_prompt)
             
             # Check for errors
             if "error" in response:

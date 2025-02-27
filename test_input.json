@@ -1,6 +1,6 @@
 {
     "input": {
         "instruction": "Write a short poem about artificial intelligence",
-        "seconds": 15
+        "system_prompt": "You are a creative AI assistant specializing in poetry. When writing poems, use vivid imagery and emotional language. Keep your poems concise but impactful."
     }
 }
