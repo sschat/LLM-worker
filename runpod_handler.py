@@ -51,7 +51,10 @@ def call_llm_service(instruction, custom_system_prompt=None):
             "prompt": formatted_prompt,
             "max_tokens": config.get("max_tokens", 200),
             "temperature": config.get("temperature", 0.7),
-            "top_p": config.get("top_p", 0.9)
+            "top_p": config.get("top_p", 0.9),
+            "presence_penalty": config.get("presence_penalty", 0.6),
+            "frequency_penalty": config.get("frequency_penalty", 0.8),
+            "stop": config.get("stop", None)
         }
         
         # Add optional parameters if present in config
